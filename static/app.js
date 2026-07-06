@@ -1,6 +1,7 @@
 "use strict";
 
-const RATING = {1:["A","#16a34a"],2:["B","#65a30d"],3:["C","#ca8a04"],4:["D","#ea580c"],5:["E","#dc2626"]};
+// Deeper shades so the white A–E letter stays legible (white on mid-tone fails contrast).
+const RATING = {1:["A","#15803d"],2:["B","#4d7c0f"],3:["C","#a16207"],4:["D","#c2410c"],5:["E","#b91c1c"]};
 const SEV = {critical:"#7f1d1d",high:"#dc2626",medium:"#d97706",low:"#ca8a04"};
 const ACCENT="#5b6cff", GOOD="#16a34a", WARN="#d97706", BAD="#dc2626", MUTED="#6b7280";
 
@@ -96,7 +97,7 @@ function renderRatings(cur){
     `<div class="rblock">${ratingBadge(s.reliability_rating)}<div><b>Reliability</b><span>${fmt(s.bugs,"",0)} bugs</span></div></div>`,
     `<div class="rblock">${ratingBadge(s.security_rating)}<div><b>Security</b><span>${fmt(s.vulnerabilities,"",0)} vulns · ${fmt(s.security_hotspots,"",0)} hotspots</span></div></div>`,
     `<div class="rblock">${ratingBadge(s.sqale_rating)}<div><b>Maintainability</b><span>${fmt(s.code_smells,"",0)} smells · ${fmt(s.duplication,"%")} dup</span></div></div>`,
-    `<div class="rblock"><span class="rating" style="background:${ACCENT}">Σ</span><div><b>Codebase size</b><span>${fmt(s.ncloc,"",0)} lines</span></div></div>`,
+    `<div class="rblock"><span class="rating" style="background:#4338ca">Σ</span><div><b>Codebase size</b><span>${fmt(s.ncloc,"",0)} lines</span></div></div>`,
   ].join("");
 }
 

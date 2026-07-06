@@ -21,8 +21,10 @@ GOOD = "#16a34a"
 WARN = "#d97706"
 BAD = "#dc2626"
 
-RATING = {1: ("A", "#16a34a"), 2: ("B", "#65a30d"), 3: ("C", "#ca8a04"),
-          4: ("D", "#ea580c"), 5: ("E", "#dc2626")}
+# Deeper shades than the chart palette so the white A–E letter stays legible
+# (white on mid-tone green/amber fails contrast).
+RATING = {1: ("A", "#15803d"), 2: ("B", "#4d7c0f"), 3: ("C", "#a16207"),
+          4: ("D", "#c2410c"), 5: ("E", "#b91c1c")}
 SEVERITY = {"critical": "#7f1d1d", "high": "#dc2626", "medium": "#d97706", "low": "#ca8a04"}
 
 
@@ -232,7 +234,7 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
         f'<div class="rblock">{rating_badge(s.get("sqale_rating"))}'
         f'<div><b>Maintainability</b><span>{_fmt(s.get("code_smells"),"",0)} smells · '
         f'{_fmt(s.get("duplication"),"%")} dup</span></div></div>',
-        f'<div class="rblock"><span class="rating" style="background:{ACCENT}">Σ</span>'
+        f'<div class="rblock"><span class="rating" style="background:#4338ca">Σ</span>'
         f'<div><b>Codebase size</b><span>{_fmt(s.get("ncloc"),"",0)} lines</span></div></div>',
     ])
 
