@@ -16,6 +16,15 @@ from flask import Flask, jsonify, render_template, send_file
 import maintdash
 
 app = Flask(__name__)
+# Don't let the browser cache styles.css / app.js — otherwise edits to the UI
+# silently show stale (a hard-reload would be needed on every change).
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
+
+@app.after_request
+def _no_cache(resp):
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
 
 
 @app.get("/")
