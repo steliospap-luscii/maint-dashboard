@@ -23,7 +23,7 @@ BAD = "#dc2626"
 
 # Deeper shades than the chart palette so the white A–E letter stays legible
 # (white on mid-tone green/amber fails contrast).
-RATING = {1: ("A", "#15803d"), 2: ("B", "#4d7c0f"), 3: ("C", "#a16207"),
+RATING = {1: ("A", "#15803d"), 2: ("B", "#3f6212"), 3: ("C", "#854d0e"),
           4: ("D", "#c2410c"), 5: ("E", "#b91c1c")}
 SEVERITY = {"critical": "#7f1d1d", "high": "#dc2626", "medium": "#d97706", "low": "#ca8a04"}
 
@@ -320,8 +320,8 @@ h2 {{ font-size:13px; text-transform:uppercase; letter-spacing:.8px; color:{MUTE
 .ratings {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }}
 .rblock {{ display:flex; align-items:center; gap:14px; background:{CARDBG}; border:1px solid {BORDER};
   border-radius:14px; padding:16px 18px; }}
-.rating {{ width:42px; height:42px; border-radius:11px; color:#fff; font-weight:700; font-size:20px;
-  display:flex; align-items:center; justify-content:center; flex:0 0 auto; }}
+.rating {{ width:42px; height:42px; border-radius:11px; color:#fff; font-weight:800; font-size:20px;
+  text-shadow:0 1px 2px rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }}
 .rblock b {{ display:block; font-size:14px; }}
 .rblock span {{ color:{MUTED}; font-size:12.5px; }}
 .chdr {{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }}

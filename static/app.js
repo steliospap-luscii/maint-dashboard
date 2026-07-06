@@ -1,7 +1,7 @@
 "use strict";
 
 // Deeper shades so the white A–E letter stays legible (white on mid-tone fails contrast).
-const RATING = {1:["A","#15803d"],2:["B","#4d7c0f"],3:["C","#a16207"],4:["D","#c2410c"],5:["E","#b91c1c"]};
+const RATING = {1:["A","#15803d"],2:["B","#3f6212"],3:["C","#854d0e"],4:["D","#c2410c"],5:["E","#b91c1c"]};
 const SEV = {critical:"#7f1d1d",high:"#dc2626",medium:"#d97706",low:"#ca8a04"};
 const ACCENT="#5b6cff", GOOD="#16a34a", WARN="#d97706", BAD="#dc2626", MUTED="#6b7280";
 
