@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maintenance Health — dashboard</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Maintenance Health</h1>
+        <div class="sub" id="subtitle">loading…</div>
+      </div>
+      <div class="actions">
+        <span class="pill" id="tracked">—</span>
+        <button id="btn-snapshot" class="btn">↻ Snapshot now</button>
+        <button id="btn-report" class="btn">⤓ Rebuild report</button>
+        <a id="btn-open" class="btn primary" href="/report" target="_blank">↗ Open PO report</a>
+      </div>
+    </header>
+
+    <div id="toast" class="toast"></div>
+
+    <div class="controls">
+      <label>Range</label>
+      <select id="from"></select>
+      <span>→</span>
+      <select id="to"></select>
+      <span class="quick">
+        <button data-months="3" class="chip">3m</button>
+        <button data-months="6" class="chip">6m</button>
+        <button data-months="0" class="chip">All</button>
+      </span>
+    </div>
+
+    <h2>At a glance</h2>
+    <div class="grid kpis" id="kpis"></div>
+
+    <h2>Codebase health ratings</h2>
+    <div class="ratings" id="ratings"></div>
+
+    <h2>Trends</h2>
+    <div class="grid charts" id="charts"></div>
+
+    <h2>Test suite &amp; security</h2>
+    <div class="two">
+      <div class="card"><div class="chdr"><h3>Test breakdown</h3><span id="tsd"></span></div>
+        <div class="chart-box"><canvas id="c-tests"></canvas></div></div>
+      <div class="card"><div class="chdr"><h3>Dependabot</h3><span>open alerts by severity</span></div>
+        <div class="chart-box"><canvas id="c-dep"></canvas></div></div>
+    </div>
+
+    <h2>Quality gate</h2>
+    <div class="card" id="gate"></div>
+
+    <footer id="footer"></footer>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

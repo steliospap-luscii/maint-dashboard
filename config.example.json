@@ -1,0 +1,22 @@
+{
+  "project_label": "My App — Android",
+  "sonar": {
+    "base_url": "https://sonarcloud.io",
+    "organization": "my-sonar-org",
+    "project_key": "my-org_my-project",
+
+    "//token": "Token is read from the Keychain (macOS) first, then this env var.",
+    "token_env": "SONAR_TOKEN",
+    "keychain": { "service": "maintdash", "account": "sonar-token" }
+  },
+  "github": {
+    "owner": "my-github-org",
+    "repo": "my-repo"
+  },
+  "goals": {
+    "//": "Target lines drawn on the KPI cards / charts. Tune to your team.",
+    "coverage_pct": 80,
+    "new_coverage_pct": 80,
+    "max_debt_ratio_pct": 5
+  }
+}

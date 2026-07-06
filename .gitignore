@@ -1,0 +1,15 @@
+# local config with your real project keys / org
+config.json
+
+# generated + local data (don't publish your metrics)
+data/
+reports/
+logs/
+
+# python venv + caches
+.venv/
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
