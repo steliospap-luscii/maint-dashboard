@@ -57,11 +57,17 @@ def snapshot(cfg: dict) -> dict:
         dep = github.get("dependabot") or {}
         print(f"  ✓ github: branches {github.get('open_branches')}  dependabot {dep.get('total')}")
 
+    baselines = sources.fetch_baselines(cfg["github"])
+    if baselines:
+        print(f"  ✓ baselines: {baselines['total']} deferred "
+              f"(detekt {baselines['detekt']} · lint {baselines['lint']})")
+
     snap = {
         "month": current_month(),
         "captured_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "sonar": sonar,
         "github": github,
+        "baselines": baselines,
     }
     DATA_DIR.mkdir(exist_ok=True)
     out = DATA_DIR / f"{snap['month']}.json"

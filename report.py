@@ -207,12 +207,17 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
     ps = (prev or {}).get("sonar") or {} if prev else {}
     g = latest.get("github") or {}
     pg = (prev or {}).get("github") or {} if prev else {}
+    bl = latest.get("baselines") or {}
+    pbl = (prev or {}).get("baselines") or {} if prev else {}
 
     def sonar_series(key):
         return [(snap["month"], (snap.get("sonar") or {}).get(key)) for snap in snapshots]
 
     def gh_series(key):
         return [(snap["month"], (snap.get("github") or {}).get(key)) for snap in snapshots]
+
+    def baseline_series(key):
+        return [(snap["month"], (snap.get("baselines") or {}).get(key)) for snap in snapshots]
 
     def density_series():
         # code smells per 1k lines — normalizes for codebase growth
@@ -250,6 +255,8 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
         kpi_card("Open branches", g.get("open_branches"), pg.get("open_branches"), decimals=0,
                  higher_better=False),
         kpi_card("Dependabot alerts", dep_total(g.get("dependabot")), dep_total(pg.get("dependabot")),
+                 decimals=0, higher_better=False),
+        kpi_card("Deferred backlog", bl.get("total"), pbl.get("total"),
                  decimals=0, higher_better=False),
     ])
 
@@ -297,6 +304,9 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
             sonar_series("tests"), color=GOOD, decimals=0)),
         chart_card("Lines of code", "codebase size (ncloc)", line_chart(
             sonar_series("ncloc"), color="#0d9488", decimals=0)),
+        chart_card("Deferred backlog",
+                   f"baselined detekt {_fmt(bl.get('detekt'),'',0)} · lint {_fmt(bl.get('lint'),'',0)}",
+                   line_chart(baseline_series("total"), y_min=0, color="#e11d48", decimals=0)),
     ])
 
     # test breakdown + dependabot

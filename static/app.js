@@ -16,6 +16,7 @@ const CHARTS = [
   {key:"open_branches",    label:"Open branches",        sub:"unmerged heads on the repo",color:"#0891b2", unit:"",  acc:s=>g(s,"github","open_branches")},
   {key:"tests",            label:"Unit tests",           sub:"total test count over time",color:GOOD,     unit:"",  acc:s=>g(s,"sonar","tests")},
   {key:"ncloc",            label:"Lines of code",        sub:"codebase size (ncloc)",   color:"#0d9488",  unit:"",  acc:s=>g(s,"sonar","ncloc")},
+  {key:"baseline_total",   label:"Deferred backlog",     sub:"detekt + lint baselined issues",color:"#e11d48",unit:"",yMin:0,acc:s=>g(s,"baselines","total")},
 ];
 
 let STATE = {config:{}, snapshots:[]};
@@ -90,6 +91,7 @@ function renderKpis(snaps, cur, prev){
     kpiCard("Unit tests", g(cur,"sonar","tests"), g(prev,"sonar","tests"), {dec:0,higher:true}),
     kpiCard("Open branches", g(cur,"github","open_branches"), g(prev,"github","open_branches"), {dec:0,higher:false}),
     kpiCard("Dependabot alerts", dep(cur), dep(prev), {dec:0,higher:false}),
+    kpiCard("Deferred backlog", g(cur,"baselines","total"), g(prev,"baselines","total"), {dec:0,higher:false}),
   ].join("");
 }
 

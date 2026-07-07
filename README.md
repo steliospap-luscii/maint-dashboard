@@ -32,6 +32,15 @@ like DORA/build-time — those belong to a separate concern):
 | Lines of code | SonarCloud |
 | Open branches | GitHub |
 | Dependabot alerts by severity | GitHub |
+| Deferred maintenance backlog (distinct detekt + Android Lint baseline issues) | GitHub repo |
+
+> **Note on Sonar code smells:** if your project enforces style/complexity/
+> maintainability via detekt / Android Lint / ktlint per-PR (with baselines) and
+> reserves SonarCloud for security rules, the Sonar smell count reflects only
+> *un-baselined* findings — not your true debt. The **Deferred backlog** metric
+> reads the repo's baseline files directly (union of distinct issue IDs, so
+> per-variant baselines don't double-count) to show the real backlog. It needs no
+> SonarCloud config change.
 
 ## Requirements
 

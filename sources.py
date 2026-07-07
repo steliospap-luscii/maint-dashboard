@@ -12,10 +12,12 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import subprocess
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 
 # SonarCloud metric keys we snapshot. new_* metrics arrive under `periods`,
 # everything else under `value` — see _measure_value below.
@@ -239,3 +241,58 @@ def fetch_github(cfg: dict) -> dict | None:
     if result["open_branches"] is None and result["dependabot"] is None:
         return None
     return result
+
+
+def fetch_baselines(cfg: dict) -> dict | None:
+    """Count the *deferred maintenance backlog* — issues suppressed in the repo's
+    detekt / Android Lint baseline files. These are the style/complexity/
+    maintainability findings that live outside SonarCloud (by design), so Sonar's
+    smell count doesn't reflect them.
+
+    Counts DISTINCT issue IDs across all baseline files (union, not sum): a repo
+    keeps per-variant baselines (-debug/-main/-legacy) that overlap heavily, so
+    summing would double-count. Union by issue identity is dedup-correct.
+    """
+    owner, repo = cfg["owner"], cfg["repo"]
+    raw = _gh(["api", f"/repos/{owner}/{repo}/git/trees/HEAD?recursive=1"])
+    if not raw:
+        return None
+    try:
+        tree = json.loads(raw)
+    except ValueError:
+        return None
+    blobs = {t["path"]: t["sha"] for t in tree.get("tree", []) if t.get("type") == "blob"}
+    detekt_files = [p for p in blobs if p.rsplit("/", 1)[-1].startswith("detekt-baseline") and p.endswith(".xml")]
+    lint_files = [p for p in blobs if "lint-baseline" in p.rsplit("/", 1)[-1] and p.endswith(".xml")]
+    if not detekt_files and not lint_files:
+        return None
+
+    def content(sha: str) -> str:
+        b = _gh(["api", f"/repos/{owner}/{repo}/git/blobs/{sha}"])
+        if not b:
+            return ""
+        try:
+            return base64.b64decode(json.loads(b)["content"]).decode("utf-8", "replace")
+        except Exception:  # noqa: BLE001
+            return ""
+
+    # detekt baseline: each suppressed finding is a <ID>Rule:signature$hash</ID>
+    detekt_ids = set()
+    for p in detekt_files:
+        detekt_ids.update(re.findall(r"<ID>(.*?)</ID>", content(p and blobs[p]), re.S))
+
+    # Android Lint baseline: <issue id=..><location file= line=/></issue>
+    lint_ids = set()
+    for p in lint_files:
+        try:
+            root = ET.fromstring(content(blobs[p]))
+        except ET.ParseError:
+            continue
+        for iss in root.findall("issue"):
+            loc = iss.find("location")
+            lint_ids.add((iss.get("id"),
+                          loc.get("file") if loc is not None else "",
+                          loc.get("line") if loc is not None else ""))
+
+    return {"detekt": len(detekt_ids), "lint": len(lint_ids),
+            "total": len(detekt_ids) + len(lint_ids)}
