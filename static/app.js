@@ -15,6 +15,7 @@ const CHARTS = [
   {key:"bugs",             label:"Bugs & vulnerabilities",sub:"reliability + security",  color:BAD,        unit:"",  acc:s=>g(s,"sonar","bugs")},
   {key:"open_branches",    label:"Open branches",        sub:"unmerged heads on the repo",color:"#0891b2", unit:"",  acc:s=>g(s,"github","open_branches")},
   {key:"tests",            label:"Unit tests",           sub:"total test count over time",color:GOOD,     unit:"",  acc:s=>g(s,"sonar","tests")},
+  {key:"ncloc",            label:"Lines of code",        sub:"codebase size (ncloc)",   color:"#0d9488",  unit:"",  acc:s=>g(s,"sonar","ncloc")},
 ];
 
 let STATE = {config:{}, snapshots:[]};
@@ -119,7 +120,8 @@ function renderCharts(snaps){
     const goalVal = cfg.goal ? G[cfg.goal] : null;
     if(goalVal!=null){ ds.push({data:labels.map(()=>goalVal), borderColor:GOOD, borderDash:[5,4],
       borderWidth:1.5, pointRadius:0, fill:false, label:"goal"}); }
-    const yScale = {beginAtZero: cfg.yMin===0};
+    const yScale = {beginAtZero: cfg.yMin===0,
+      ticks:{callback:v=> Math.abs(v)>=1e6 ? (v/1e6)+"M" : Math.abs(v)>=1e4 ? Math.round(v/1e3)+"k" : v}};
     if(goalVal!=null) yScale.suggestedMax = goalVal * 1.1;
     if(charts[id]) charts[id].destroy();
     charts[id]=new Chart(document.getElementById(id), {

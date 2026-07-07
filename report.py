@@ -35,6 +35,15 @@ def _month_label(ym: str) -> str:
         return ym
 
 
+def _axis_label(v, decimals):
+    # compact large y-axis ticks so 6-digit values (e.g. LOC) don't clip the edge
+    if abs(v) >= 1_000_000:
+        return f"{v / 1e6:.1f}M"
+    if abs(v) >= 10_000:
+        return f"{v / 1e3:.0f}k"
+    return _fmt(v, "", decimals)
+
+
 def _fmt(v, unit="", decimals=1):
     if v is None:
         return "—"
@@ -89,7 +98,7 @@ def line_chart(series, y_min=None, y_max=None, color=ACCENT, unit="", goal=None,
         gy = pt + t / 3 * plot_h
         gv = hi - t / 3 * (hi - lo)
         parts.append(f'<line x1="{pl}" y1="{gy:.1f}" x2="{W-pr}" y2="{gy:.1f}" stroke="{BORDER}" stroke-width="1"/>')
-        parts.append(f'<text x="{pl-8}" y="{gy+4:.1f}" text-anchor="end" class="ax">{_fmt(gv, "", decimals)}</text>')
+        parts.append(f'<text x="{pl-8}" y="{gy+4:.1f}" text-anchor="end" class="ax">{_axis_label(gv, decimals)}</text>')
 
     # goal line
     if goal is not None and lo <= goal <= hi:
@@ -286,6 +295,8 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
             gh_series("open_branches"), color="#0891b2", decimals=0)),
         chart_card("Unit tests", "total test count over time", line_chart(
             sonar_series("tests"), color=GOOD, decimals=0)),
+        chart_card("Lines of code", "codebase size (ncloc)", line_chart(
+            sonar_series("ncloc"), color="#0d9488", decimals=0)),
     ])
 
     # test breakdown + dependabot
