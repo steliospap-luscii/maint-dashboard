@@ -7,16 +7,23 @@ const ACCENT="#5b6cff", GOOD="#16a34a", WARN="#d97706", BAD="#dc2626", MUTED="#6
 
 // Trend charts. accessor pulls the value (or null) from a snapshot.
 const CHARTS = [
-  {key:"coverage",         label:"Coverage trend",       sub:"overall code %, monthly", color:ACCENT,     unit:"%", yMin:0,      acc:s=>g(s,"sonar","coverage")},
+  {key:"coverage",         label:"Coverage trend",       sub:"overall vs new-code %, monthly", unit:"%", yMin:0,
+    series:[{label:"overall",color:ACCENT,acc:s=>g(s,"sonar","coverage")},
+            {label:"new code",color:"#38bdf8",acc:s=>g(s,"sonar","new_coverage")}]},
   {key:"sqale_debt_ratio", label:"Tech-debt ratio",      sub:"SonarCloud SQALE",        color:WARN,       unit:"%", yMin:0, goal:"max_debt_ratio_pct", acc:s=>g(s,"sonar","sqale_debt_ratio")},
   {key:"code_smells",      label:"Code smells",          sub:"maintainability findings",color:"#8b5cf6",  unit:"",  acc:s=>g(s,"sonar","code_smells")},
   {key:"smell_density",    label:"Smell density",        sub:"code smells per 1k lines",color:"#a855f7",  unit:"/kLOC", yMin:0, dec:2, acc:s=>{const sm=g(s,"sonar","code_smells"),nc=g(s,"sonar","ncloc");return (sm!=null&&nc)?+(sm/nc*1000).toFixed(2):null;}},
   {key:"cognitive_complexity",label:"Cognitive complexity",sub:"total across the codebase",color:"#db2777",unit:"", acc:s=>g(s,"sonar","cognitive_complexity")},
-  {key:"bugs",             label:"Bugs & vulnerabilities",sub:"reliability + security",  color:BAD,        unit:"",  acc:s=>g(s,"sonar","bugs")},
+  {key:"bugs",             label:"Bugs & vulnerabilities",sub:"reliability + security",  unit:"", yMin:0,
+    series:[{label:"bugs",color:BAD,acc:s=>g(s,"sonar","bugs")},
+            {label:"vulnerabilities",color:"#ea580c",acc:s=>g(s,"sonar","vulnerabilities")},
+            {label:"hotspots",color:"#f59e0b",acc:s=>g(s,"sonar","security_hotspots")}]},
   {key:"open_branches",    label:"Open branches",        sub:"unmerged heads on the repo",color:"#0891b2", unit:"",  acc:s=>g(s,"github","open_branches")},
   {key:"tests",            label:"Unit tests",           sub:"total test count over time",color:GOOD,     unit:"",  acc:s=>g(s,"sonar","tests")},
   {key:"ncloc",            label:"Lines of code",        sub:"codebase size (ncloc)",   color:"#0d9488",  unit:"",  acc:s=>g(s,"sonar","ncloc")},
-  {key:"baseline_total",   label:"Deferred backlog",     sub:"detekt + lint baselined issues",color:"#e11d48",unit:"",yMin:0,acc:s=>g(s,"baselines","total")},
+  {key:"baseline_total",   label:"Deferred backlog",     sub:"baselined issues by tool (distinct)",unit:"",yMin:0,
+    series:[{label:"detekt",color:"#e11d48",acc:s=>g(s,"baselines","detekt")},
+            {label:"lint",color:"#f59e0b",acc:s=>g(s,"baselines","lint")}]},
 ];
 
 let STATE = {config:{}, snapshots:[]};
@@ -116,12 +123,14 @@ function renderCharts(snaps){
     card.innerHTML=`<div class="chdr"><h3>${cfg.label}</h3><span>${cfg.sub}</span></div>
       <div class="chart-box"><canvas id="${id}"></canvas></div>`;
     box.appendChild(card);
-    const data = snaps.map(cfg.acc);
-    const ds=[{data, borderColor:cfg.color, backgroundColor:cfg.color+"1f", fill:true,
-      tension:.3, spanGaps:true, pointRadius:3, pointHoverRadius:5, borderWidth:2.5}];
-    const goalVal = cfg.goal ? G[cfg.goal] : null;
-    if(goalVal!=null){ ds.push({data:labels.map(()=>goalVal), borderColor:GOOD, borderDash:[5,4],
-      borderWidth:1.5, pointRadius:0, fill:false, label:"goal"}); }
+    const multi = Array.isArray(cfg.series);
+    const defs = multi ? cfg.series : [{label:cfg.label, color:cfg.color, acc:cfg.acc}];
+    const ds = defs.map(d=>({label:d.label, data:snaps.map(d.acc), borderColor:d.color,
+      backgroundColor: multi ? "transparent" : d.color+"1f", fill:!multi,
+      tension:.3, spanGaps:true, pointRadius:3, pointHoverRadius:5, borderWidth:2.5}));
+    const goalVal = (!multi && cfg.goal) ? G[cfg.goal] : null;
+    if(goalVal!=null){ ds.push({label:"goal", data:labels.map(()=>goalVal), borderColor:GOOD,
+      borderDash:[5,4], borderWidth:1.5, pointRadius:0, fill:false}); }
     const yScale = {beginAtZero: cfg.yMin===0,
       ticks:{callback:v=> Math.abs(v)>=1e6 ? (v/1e6)+"M" : Math.abs(v)>=1e4 ? Math.round(v/1e3)+"k" : v}};
     if(goalVal!=null) yScale.suggestedMax = goalVal * 1.1;
@@ -130,8 +139,11 @@ function renderCharts(snaps){
       type:"line",
       data:{labels, datasets:ds},
       options:{responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{display:false},
-          tooltip:{callbacks:{label:ctx=> (ctx.datasetIndex===1?"goal ":"")+fmt(ctx.parsed.y,cfg.unit,cfg.dec??1)}}},
+        plugins:{legend:{display:multi, position:"top", labels:{boxWidth:10, font:{size:11}, usePointStyle:true}},
+          tooltip:{callbacks:{label:ctx=>{
+            const nm=(multi || ctx.dataset.label==="goal") ? ctx.dataset.label+": " : "";
+            return nm + fmt(ctx.parsed.y, cfg.unit, cfg.dec??1);
+          }}}},
         scales:{y:yScale, x:{grid:{display:false}}}}
     });
   });

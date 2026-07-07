@@ -154,6 +154,82 @@ def line_chart(series, y_min=None, y_max=None, color=ACCENT, unit="", goal=None,
     return "".join(parts)
 
 
+def multi_line_chart(series_defs, y_min=None, y_max=None, decimals=1):
+    """series_defs: [{"label","color","points":[(ym, value|None)]}]. Draws several
+    lines on shared axes with a legend. No per-point value callouts (they'd
+    collide) — the legend + gridlines carry the read."""
+    W, H = 520, 205
+    pl, pr, pt, pb = 46, 16, 30, 30  # extra top padding for the legend row
+    allvals = [v for sd in series_defs for _, v in sd["points"] if v is not None]
+    if not allvals:
+        return '<div class="empty">no data yet</div>'
+    lo = y_min if y_min is not None else min(allvals)
+    hi = y_max if y_max is not None else max(allvals)
+    if hi == lo:
+        pad = max(1.0, abs(hi) * 0.06)
+        if y_min is None:
+            lo -= pad
+        if y_max is None:
+            hi += pad
+        if hi == lo:
+            hi = lo + 1
+    span = hi - lo
+    if y_min is None:
+        lo -= span * 0.10
+    if y_max is None:
+        hi += span * 0.16
+
+    plot_w, plot_h = W - pl - pr, H - pt - pb
+    n = len(series_defs[0]["points"])
+
+    def x(i):
+        return pl if n == 1 else pl + i / (n - 1) * plot_w
+
+    def y(v):
+        return pt + (1 - (v - lo) / (hi - lo)) * plot_h
+
+    parts = [f'<svg viewBox="0 0 {W} {H}" class="chart" preserveAspectRatio="xMidYMid meet" role="img">']
+    for t in range(4):
+        gy = pt + t / 3 * plot_h
+        gv = hi - t / 3 * (hi - lo)
+        parts.append(f'<line x1="{pl}" y1="{gy:.1f}" x2="{W-pr}" y2="{gy:.1f}" stroke="{BORDER}" stroke-width="1"/>')
+        parts.append(f'<text x="{pl-8}" y="{gy+4:.1f}" text-anchor="end" class="ax">{_axis_label(gv, decimals)}</text>')
+
+    # legend row along the top
+    lx = pl
+    for sd in series_defs:
+        parts.append(f'<rect x="{lx:.1f}" y="6" width="10" height="10" rx="2" fill="{sd["color"]}"/>')
+        parts.append(f'<text x="{lx+14:.1f}" y="15" class="ax">{html.escape(sd["label"])}</text>')
+        lx += 20 + len(sd["label"]) * 6.5
+
+    for sd in series_defs:
+        color = sd["color"]
+        seg, segments = [], []
+        for i, (_, v) in enumerate(sd["points"]):
+            if v is None:
+                if seg:
+                    segments.append(seg); seg = []
+            else:
+                seg.append((x(i), y(v)))
+        if seg:
+            segments.append(seg)
+        for s in segments:
+            if len(s) >= 2:
+                pts = " ".join(f"{px:.1f},{py:.1f}" for px, py in s)
+                parts.append(f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="2.5" '
+                             f'stroke-linejoin="round" stroke-linecap="round"/>')
+            for px, py in s:
+                parts.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="3" fill="{color}"/>')
+
+    step = max(1, n // 6)
+    for i, (ym, _) in enumerate(series_defs[0]["points"]):
+        if i % step == 0 or i == n - 1:
+            parts.append(f'<text x="{x(i):.1f}" y="{H-8}" text-anchor="middle" class="ax">{_month_label(ym)}</text>')
+
+    parts.append("</svg>")
+    return "".join(parts)
+
+
 def stacked_bar(successful, skipped, failed):
     total = (successful or 0) + (skipped or 0) + (failed or 0)
     if total == 0:
@@ -283,9 +359,10 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
         debt_hours = round(s["sqale_index_min"] / 60, 1)
 
     charts = "".join([
-        chart_card("Coverage trend", "overall code %, monthly", line_chart(
-            sonar_series("coverage"), y_min=0, color=ACCENT, unit="%",
-            goal=goals.get("coverage_pct"))),
+        chart_card("Coverage trend", "overall vs new-code %, monthly", multi_line_chart([
+            {"label": "overall", "color": ACCENT, "points": sonar_series("coverage")},
+            {"label": "new code", "color": "#38bdf8", "points": sonar_series("new_coverage")},
+        ], y_min=0)),
         chart_card("Tech-debt ratio", f"SonarCloud SQALE · ~{_fmt(debt_hours,'h') if debt_hours else '—'} remediation",
                    line_chart(sonar_series("sqale_debt_ratio"), y_min=0,
                               y_max=goals.get("max_debt_ratio_pct"), color=WARN, unit="%",
@@ -296,17 +373,21 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
             density_series(), y_min=0, color="#a855f7", unit="/kLOC", decimals=2)),
         chart_card("Cognitive complexity", "total across the codebase", line_chart(
             sonar_series("cognitive_complexity"), color="#db2777", decimals=0)),
-        chart_card("Bugs & vulnerabilities", "reliability + security findings", line_chart(
-            sonar_series("bugs"), color=BAD, decimals=0)),
+        chart_card("Bugs & vulnerabilities", "reliability + security findings", multi_line_chart([
+            {"label": "bugs", "color": BAD, "points": sonar_series("bugs")},
+            {"label": "vulnerabilities", "color": "#ea580c", "points": sonar_series("vulnerabilities")},
+            {"label": "hotspots", "color": "#f59e0b", "points": sonar_series("security_hotspots")},
+        ], y_min=0, decimals=0)),
         chart_card("Open branches", "unmerged heads on the repo", line_chart(
             gh_series("open_branches"), color="#0891b2", decimals=0)),
         chart_card("Unit tests", "total test count over time", line_chart(
             sonar_series("tests"), color=GOOD, decimals=0)),
         chart_card("Lines of code", "codebase size (ncloc)", line_chart(
             sonar_series("ncloc"), color="#0d9488", decimals=0)),
-        chart_card("Deferred backlog",
-                   f"baselined detekt {_fmt(bl.get('detekt'),'',0)} · lint {_fmt(bl.get('lint'),'',0)}",
-                   line_chart(baseline_series("total"), y_min=0, color="#e11d48", decimals=0)),
+        chart_card("Deferred backlog", "baselined issues by tool (distinct)", multi_line_chart([
+            {"label": "detekt", "color": "#e11d48", "points": baseline_series("detekt")},
+            {"label": "lint", "color": "#f59e0b", "points": baseline_series("lint")},
+        ], y_min=0, decimals=0)),
     ])
 
     # test breakdown + dependabot

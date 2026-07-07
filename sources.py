@@ -243,25 +243,11 @@ def fetch_github(cfg: dict) -> dict | None:
     return result
 
 
-def fetch_baselines(cfg: dict) -> dict | None:
-    """Count the *deferred maintenance backlog* — issues suppressed in the repo's
-    detekt / Android Lint baseline files. These are the style/complexity/
-    maintainability findings that live outside SonarCloud (by design), so Sonar's
-    smell count doesn't reflect them.
-
-    Counts DISTINCT issue IDs across all baseline files (union, not sum): a repo
-    keeps per-variant baselines (-debug/-main/-legacy) that overlap heavily, so
-    summing would double-count. Union by issue identity is dedup-correct.
-    """
-    owner, repo = cfg["owner"], cfg["repo"]
-    raw = _gh(["api", f"/repos/{owner}/{repo}/git/trees/HEAD?recursive=1"])
-    if not raw:
-        return None
-    try:
-        tree = json.loads(raw)
-    except ValueError:
-        return None
-    blobs = {t["path"]: t["sha"] for t in tree.get("tree", []) if t.get("type") == "blob"}
+def _count_baselines(owner: str, repo: str, blobs: dict) -> dict | None:
+    """Given a {path: blob-sha} map of a repo tree, count DISTINCT baselined
+    issue IDs across all detekt / Android Lint baseline files (union, not sum):
+    per-variant baselines (-debug/-main/-legacy) overlap heavily, so summing
+    would double-count. Union by issue identity is dedup-correct."""
     detekt_files = [p for p in blobs if p.rsplit("/", 1)[-1].startswith("detekt-baseline") and p.endswith(".xml")]
     lint_files = [p for p in blobs if "lint-baseline" in p.rsplit("/", 1)[-1] and p.endswith(".xml")]
     if not detekt_files and not lint_files:
@@ -279,7 +265,7 @@ def fetch_baselines(cfg: dict) -> dict | None:
     # detekt baseline: each suppressed finding is a <ID>Rule:signature$hash</ID>
     detekt_ids = set()
     for p in detekt_files:
-        detekt_ids.update(re.findall(r"<ID>(.*?)</ID>", content(p and blobs[p]), re.S))
+        detekt_ids.update(re.findall(r"<ID>(.*?)</ID>", content(blobs[p]), re.S))
 
     # Android Lint baseline: <issue id=..><location file= line=/></issue>
     lint_ids = set()
@@ -296,3 +282,42 @@ def fetch_baselines(cfg: dict) -> dict | None:
 
     return {"detekt": len(detekt_ids), "lint": len(lint_ids),
             "total": len(detekt_ids) + len(lint_ids)}
+
+
+def _tree_blobs(owner: str, repo: str, ref: str) -> dict | None:
+    raw = _gh(["api", f"/repos/{owner}/{repo}/git/trees/{ref}?recursive=1"])
+    if not raw:
+        return None
+    try:
+        tree = json.loads(raw)
+    except ValueError:
+        return None
+    return {t["path"]: t["sha"] for t in tree.get("tree", []) if t.get("type") == "blob"}
+
+
+def fetch_baselines(cfg: dict) -> dict | None:
+    """The *deferred maintenance backlog* — issues suppressed in the repo's detekt
+    / Android Lint baselines. These style/complexity/maintainability findings live
+    outside SonarCloud (by design), so Sonar's smell count doesn't reflect them."""
+    blobs = _tree_blobs(cfg["owner"], cfg["repo"], "HEAD")
+    return _count_baselines(cfg["owner"], cfg["repo"], blobs) if blobs else None
+
+
+def fetch_baselines_at(cfg: dict, commit_sha: str) -> dict | None:
+    """Same as fetch_baselines but for a historical commit — used to backfill the
+    backlog trend from git history."""
+    blobs = _tree_blobs(cfg["owner"], cfg["repo"], commit_sha)
+    return _count_baselines(cfg["owner"], cfg["repo"], blobs) if blobs else None
+
+
+def commit_as_of(cfg: dict, until_iso: str) -> str | None:
+    """SHA of the latest commit on the default branch at or before until_iso
+    (e.g. '2026-02-01T00:00:00Z' for 'as of end of January')."""
+    raw = _gh(["api", f"/repos/{cfg['owner']}/{cfg['repo']}/commits?until={until_iso}&per_page=1"])
+    if not raw:
+        return None
+    try:
+        arr = json.loads(raw)
+    except ValueError:
+        return None
+    return arr[0]["sha"] if isinstance(arr, list) and arr else None

@@ -130,6 +130,25 @@ def backfill(cfg: dict):
         ym = _next_month_start(ym)[:7]
     print(f"backfill: {created} created, {kept} kept")
 
+    # Backfill the deferred-backlog trend from git history: for each month with
+    # no baseline data yet, read the baseline files as-of that month's end.
+    print("→ deferred backlog from git history …")
+    for path in sorted(DATA_DIR.glob("*.json")):
+        snap = json.loads(path.read_text())
+        if snap.get("baselines"):
+            continue
+        cutoff = _next_month_start(snap["month"]) + "T00:00:00Z"
+        sha = sources.commit_as_of(cfg["github"], cutoff)
+        if not sha:
+            print(f"  ~ {snap['month']}  no commit as-of month end")
+            continue
+        bl = sources.fetch_baselines_at(cfg["github"], sha)
+        if bl:
+            snap["baselines"] = bl
+            path.write_text(json.dumps(snap, indent=2))
+            print(f"  + {snap['month']}  backlog {bl['total']} "
+                  f"(detekt {bl['detekt']} · lint {bl['lint']})")
+
 
 def load_snapshots() -> list[dict]:
     if not DATA_DIR.exists():
