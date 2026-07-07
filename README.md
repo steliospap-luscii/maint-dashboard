@@ -27,6 +27,7 @@ like DORA/build-time — those belong to a separate concern):
 | Tech-debt ratio (SQALE) + remediation time | SonarCloud |
 | Reliability / Security / Maintainability ratings (A–E) | SonarCloud |
 | Bugs, vulnerabilities, security hotspots, code smells, duplication | SonarCloud |
+| Code-smell density (per 1k LOC) + cognitive complexity | SonarCloud |
 | Unit tests (passing / skipped / failing) + success density | SonarCloud |
 | Lines of code | SonarCloud |
 | Open branches | GitHub |

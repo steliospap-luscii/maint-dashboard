@@ -10,6 +10,8 @@ const CHARTS = [
   {key:"coverage",         label:"Coverage trend",       sub:"overall code %, monthly", color:ACCENT,     unit:"%", yMin:0,      acc:s=>g(s,"sonar","coverage")},
   {key:"sqale_debt_ratio", label:"Tech-debt ratio",      sub:"SonarCloud SQALE",        color:WARN,       unit:"%", yMin:0, goal:"max_debt_ratio_pct", acc:s=>g(s,"sonar","sqale_debt_ratio")},
   {key:"code_smells",      label:"Code smells",          sub:"maintainability findings",color:"#8b5cf6",  unit:"",  acc:s=>g(s,"sonar","code_smells")},
+  {key:"smell_density",    label:"Smell density",        sub:"code smells per 1k lines",color:"#a855f7",  unit:"/kLOC", yMin:0, dec:2, acc:s=>{const sm=g(s,"sonar","code_smells"),nc=g(s,"sonar","ncloc");return (sm!=null&&nc)?+(sm/nc*1000).toFixed(2):null;}},
+  {key:"cognitive_complexity",label:"Cognitive complexity",sub:"total across the codebase",color:"#db2777",unit:"", acc:s=>g(s,"sonar","cognitive_complexity")},
   {key:"bugs",             label:"Bugs & vulnerabilities",sub:"reliability + security",  color:BAD,        unit:"",  acc:s=>g(s,"sonar","bugs")},
   {key:"open_branches",    label:"Open branches",        sub:"unmerged heads on the repo",color:"#0891b2", unit:"",  acc:s=>g(s,"github","open_branches")},
   {key:"tests",            label:"Unit tests",           sub:"total test count over time",color:GOOD,     unit:"",  acc:s=>g(s,"sonar","tests")},
@@ -96,7 +98,7 @@ function renderRatings(cur){
   document.getElementById("ratings").innerHTML = [
     `<div class="rblock">${ratingBadge(s.reliability_rating)}<div><b>Reliability</b><span>${fmt(s.bugs,"",0)} bugs</span></div></div>`,
     `<div class="rblock">${ratingBadge(s.security_rating)}<div><b>Security</b><span>${fmt(s.vulnerabilities,"",0)} vulns · ${fmt(s.security_hotspots,"",0)} hotspots</span></div></div>`,
-    `<div class="rblock">${ratingBadge(s.sqale_rating)}<div><b>Maintainability</b><span>${fmt(s.code_smells,"",0)} smells · ${fmt(s.duplication,"%")} dup</span></div></div>`,
+    `<div class="rblock">${ratingBadge(s.sqale_rating)}<div><b>Maintainability</b><span>${fmt(s.code_smells,"",0)} smells · ${fmt(s.code_smells!=null&&s.ncloc?s.code_smells/s.ncloc*1000:null,"/kLOC")} · ${fmt(s.duplication,"%")} dup</span></div></div>`,
     `<div class="rblock"><span class="rating" style="background:#4338ca">Σ</span><div><b>Codebase size</b><span>${fmt(s.ncloc,"",0)} lines</span></div></div>`,
   ].join("");
 }
@@ -125,7 +127,7 @@ function renderCharts(snaps){
       data:{labels, datasets:ds},
       options:{responsive:true, maintainAspectRatio:false,
         plugins:{legend:{display:false},
-          tooltip:{callbacks:{label:ctx=> (ctx.datasetIndex===1?"goal ":"")+fmt(ctx.parsed.y,cfg.unit,1)}}},
+          tooltip:{callbacks:{label:ctx=> (ctx.datasetIndex===1?"goal ":"")+fmt(ctx.parsed.y,cfg.unit,cfg.dec??1)}}},
         scales:{y:yScale, x:{grid:{display:false}}}}
     });
   });

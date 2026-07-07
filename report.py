@@ -125,7 +125,14 @@ def line_chart(series, y_min=None, y_max=None, color=ACCENT, unit="", goal=None,
     lv = series[last_i][1]
     lx, ly = x(last_i), y(lv)
     parts.append(f'<circle cx="{lx:.1f}" cy="{ly:.1f}" r="4.5" fill="{color}"/>')
-    parts.append(f'<text x="{lx:.1f}" y="{ly-12:.1f}" text-anchor="middle" class="val" fill="{color}">'
+    # keep a wide last-value label inside the viewbox instead of clipping it
+    if lx > W - 56:
+        tx, anchor = W - pr, "end"
+    elif lx < pl + 28:
+        tx, anchor = pl, "start"
+    else:
+        tx, anchor = lx, "middle"
+    parts.append(f'<text x="{tx:.1f}" y="{ly-12:.1f}" text-anchor="{anchor}" class="val" fill="{color}">'
                  f'{_fmt(lv, unit, decimals)}</text>')
 
     # x labels (thin them out if crowded)
@@ -198,6 +205,19 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
     def gh_series(key):
         return [(snap["month"], (snap.get("github") or {}).get(key)) for snap in snapshots]
 
+    def density_series():
+        # code smells per 1k lines — normalizes for codebase growth
+        out = []
+        for snap in snapshots:
+            so = snap.get("sonar") or {}
+            sm, nc = so.get("code_smells"), so.get("ncloc")
+            out.append((snap["month"], round(sm / nc * 1000, 2) if (sm is not None and nc) else None))
+        return out
+
+    def smell_density(so):
+        sm, nc = so.get("code_smells"), so.get("ncloc")
+        return sm / nc * 1000 if (sm is not None and nc) else None
+
     def dep_total(gd):
         return (gd or {}).get("total") if gd else None
 
@@ -233,7 +253,7 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
         f'{_fmt(s.get("security_hotspots"),"",0)} hotspots</span></div></div>',
         f'<div class="rblock">{rating_badge(s.get("sqale_rating"))}'
         f'<div><b>Maintainability</b><span>{_fmt(s.get("code_smells"),"",0)} smells · '
-        f'{_fmt(s.get("duplication"),"%")} dup</span></div></div>',
+        f'{_fmt(smell_density(s),"/kLOC")} · {_fmt(s.get("duplication"),"%")} dup</span></div></div>',
         f'<div class="rblock"><span class="rating" style="background:#4338ca">Σ</span>'
         f'<div><b>Codebase size</b><span>{_fmt(s.get("ncloc"),"",0)} lines</span></div></div>',
     ])
@@ -256,6 +276,10 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
                               goal=goals.get("max_debt_ratio_pct"), decimals=1)),
         chart_card("Code smells", "total maintainability findings", line_chart(
             sonar_series("code_smells"), color="#8b5cf6", decimals=0)),
+        chart_card("Smell density", "code smells per 1k lines", line_chart(
+            density_series(), y_min=0, color="#a855f7", unit="/kLOC", decimals=2)),
+        chart_card("Cognitive complexity", "total across the codebase", line_chart(
+            sonar_series("cognitive_complexity"), color="#db2777", decimals=0)),
         chart_card("Bugs & vulnerabilities", "reliability + security findings", line_chart(
             sonar_series("bugs"), color=BAD, decimals=0)),
         chart_card("Open branches", "unmerged heads on the repo", line_chart(

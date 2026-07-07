@@ -26,7 +26,7 @@ SONAR_METRICS = [
     "security_hotspots", "bugs", "vulnerabilities",
     "reliability_rating", "security_rating", "sqale_rating",
     "sqale_debt_ratio", "sqale_index",
-    "ncloc", "duplicated_lines_density",
+    "ncloc", "duplicated_lines_density", "cognitive_complexity",
 ]
 
 
@@ -164,6 +164,7 @@ def assemble_sonar(by_metric: dict, project_name: str, url: str,
         "sqale_index_min": as_int(by_metric.get("sqale_index")),
         "ncloc": as_int(by_metric.get("ncloc")),
         "duplication": by_metric.get("duplicated_lines_density"),
+        "cognitive_complexity": as_int(by_metric.get("cognitive_complexity")),
     }
 
 
