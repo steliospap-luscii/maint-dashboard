@@ -308,6 +308,15 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
         sm, nc = so.get("code_smells"), so.get("ncloc")
         return sm / nc * 1000 if (sm is not None and nc) else None
 
+    def per_kloc_series(key, ndigits=1):
+        # any sonar count normalized per 1k lines — reads through codebase growth
+        out = []
+        for snap in snapshots:
+            so = snap.get("sonar") or {}
+            v, nc = so.get(key), so.get("ncloc")
+            out.append((snap["month"], round(v / nc * 1000, ndigits) if (v is not None and nc) else None))
+        return out
+
     def dep_total(gd):
         return (gd or {}).get("total") if gd else None
 
@@ -373,6 +382,8 @@ def build_report(snapshots: list[dict], cfg: dict, generated_at: str) -> str:
             density_series(), y_min=0, color="#a855f7", unit="/kLOC", decimals=2)),
         chart_card("Cognitive complexity", "total across the codebase", line_chart(
             sonar_series("cognitive_complexity"), color="#db2777", decimals=0)),
+        chart_card("Complexity density", "cognitive complexity per 1k lines", line_chart(
+            per_kloc_series("cognitive_complexity"), y_min=0, color="#be185d", unit="/kLOC", decimals=1)),
         chart_card("Bugs & vulnerabilities", "reliability + security findings", multi_line_chart([
             {"label": "bugs", "color": BAD, "points": sonar_series("bugs")},
             {"label": "vulnerabilities", "color": "#ea580c", "points": sonar_series("vulnerabilities")},

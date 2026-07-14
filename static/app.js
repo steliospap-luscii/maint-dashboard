@@ -14,6 +14,7 @@ const CHARTS = [
   {key:"code_smells",      label:"Code smells",          sub:"maintainability findings",color:"#8b5cf6",  unit:"",  acc:s=>g(s,"sonar","code_smells")},
   {key:"smell_density",    label:"Smell density",        sub:"code smells per 1k lines",color:"#a855f7",  unit:"/kLOC", yMin:0, dec:2, acc:s=>{const sm=g(s,"sonar","code_smells"),nc=g(s,"sonar","ncloc");return (sm!=null&&nc)?+(sm/nc*1000).toFixed(2):null;}},
   {key:"cognitive_complexity",label:"Cognitive complexity",sub:"total across the codebase",color:"#db2777",unit:"", acc:s=>g(s,"sonar","cognitive_complexity")},
+  {key:"complexity_density",label:"Complexity density",sub:"cognitive complexity per 1k lines",color:"#be185d",unit:"/kLOC",yMin:0,dec:1,acc:s=>{const c=g(s,"sonar","cognitive_complexity"),nc=g(s,"sonar","ncloc");return (c!=null&&nc)?+(c/nc*1000).toFixed(1):null;}},
   {key:"bugs",             label:"Bugs & vulnerabilities",sub:"reliability + security",  unit:"", yMin:0,
     series:[{label:"bugs",color:BAD,acc:s=>g(s,"sonar","bugs")},
             {label:"vulnerabilities",color:"#ea580c",acc:s=>g(s,"sonar","vulnerabilities")},
